@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -39,25 +40,41 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "smart-canteen-super-secret-key-change-in-prod-2026")
+    SECRET_KEY: str = "smart-canteen-super-secret-key-change-in-prod-2026"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
     # Database: Default SQLite, upgradeable to PostgreSQL via DATABASE_URL env var
-    DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+    DATABASE_URL: str = DEFAULT_DATABASE_URL
     
     # Host & Port for local/unified execution
-    HOST: str = os.getenv("HOST", "127.0.0.1")
-    PORT: int = int(os.getenv("PORT", "8000"))
+    HOST: str = "127.0.0.1"
+    PORT: int = 8000
+
+    @field_validator("PORT", mode="before")
+    @classmethod
+    def validate_port(cls, v):
+        if not v or (isinstance(v, str) and not v.strip().isdigit()):
+            return 8000
+        return int(v)
+
+    @field_validator("ACCESS_TOKEN_EXPIRE_MINUTES", mode="before")
+    @classmethod
+    def validate_expire(cls, v):
+        if not v or (isinstance(v, str) and not v.strip().isdigit()):
+            return 60 * 24 * 7
+        return int(v)
+
     
     # Firebase configuration
-    VITE_FIREBASE_API_KEY: str = "AIzaSyC1nOhO-HvHUmZ832pU8PNhnKt04XiwkPQ"
-    VITE_FIREBASE_AUTH_DOMAIN: str = "workshop-b96b6.firebaseapp.com"
-    VITE_FIREBASE_PROJECT_ID: str = "workshop-b96b6"
-    VITE_FIREBASE_STORAGE_BUCKET: str = "workshop-b96b6.firebasestorage.app"
-    VITE_FIREBASE_MESSAGING_SENDER_ID: str = "469841093222"
-    VITE_FIREBASE_APP_ID: str = "1:469841093222:web:d7f6bbcd8ee606397183a7"
-    VITE_FIREBASE_MEASUREMENT_ID: str = "G-V5YN0E1HYC"
+    VITE_FIREBASE_API_KEY: str = os.getenv("VITE_FIREBASE_API_KEY") or "AIzaSyC1nOhO-HvHUmZ832pU8PNhnKt04XiwkPQ"
+    VITE_FIREBASE_AUTH_DOMAIN: str = os.getenv("VITE_FIREBASE_AUTH_DOMAIN") or "workshop-b96b6.firebaseapp.com"
+    VITE_FIREBASE_PROJECT_ID: str = os.getenv("VITE_FIREBASE_PROJECT_ID") or "workshop-b96b6"
+    VITE_FIREBASE_STORAGE_BUCKET: str = os.getenv("VITE_FIREBASE_STORAGE_BUCKET") or "workshop-b96b6.firebasestorage.app"
+    VITE_FIREBASE_MESSAGING_SENDER_ID: str = os.getenv("VITE_FIREBASE_MESSAGING_SENDER_ID") or "469841093222"
+    VITE_FIREBASE_APP_ID: str = os.getenv("VITE_FIREBASE_APP_ID") or "1:469841093222:web:d7f6bbcd8ee606397183a7"
+    VITE_FIREBASE_MEASUREMENT_ID: str = os.getenv("VITE_FIREBASE_MEASUREMENT_ID") or "G-V5YN0E1HYC"
+
     
     # ML Models directory
     MODEL_DIR: Path = (
