@@ -51,6 +51,27 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8000
 
+    @field_validator("PROJECT_NAME", mode="before")
+    @classmethod
+    def validate_project_name(cls, v):
+        if not v or not str(v).strip():
+            return "Smart Canteen Waste Predictor"
+        return str(v)
+
+    @field_validator("PROJECT_VERSION", mode="before")
+    @classmethod
+    def validate_project_version(cls, v):
+        if not v or not str(v).strip():
+            return "1.0.0"
+        return str(v)
+
+    @field_validator("API_V1_STR", mode="before")
+    @classmethod
+    def validate_api_prefix(cls, v):
+        if not v or not str(v).strip():
+            return "/api/v1"
+        return str(v)
+
     @field_validator("PORT", mode="before")
     @classmethod
     def validate_port(cls, v):
@@ -64,6 +85,7 @@ class Settings(BaseSettings):
         if not v or (isinstance(v, str) and not v.strip().isdigit()):
             return 60 * 24 * 7
         return int(v)
+
 
     
     # Firebase configuration

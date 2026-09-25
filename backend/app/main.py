@@ -30,8 +30,8 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Smart Canteen Waste Predictor API...")
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.PROJECT_VERSION,
+    title=str(settings.PROJECT_NAME or "Smart Canteen Waste Predictor"),
+    version=str(settings.PROJECT_VERSION or "1.0.0"),
     description="Full-stack AI-powered Smart Canteen Waste Prediction, Preparation Recommendation, and Explainability Engine.",
     lifespan=lifespan
 )
