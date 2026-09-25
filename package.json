@@ -1,0 +1,25 @@
+{
+  "name": "smart-canteen-waste-predictor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Canteen Waste Predictor - Full-stack AI System with React, Vite, FastAPI, and Firebase",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "python run.py",
+    "dev:venv": "venv\\Scripts\\python.exe run.py",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "backend:test": "venv\\Scripts\\python.exe backend/test_app.py"
+  },
+  "keywords": [
+    "canteen",
+    "waste-prediction",
+    "machine-learning",
+    "fastapi",
+    "react",
+    "vite",
+    "firebase"
+  ],
+  "author": "Adish S",
+  "license": "MIT"
+}

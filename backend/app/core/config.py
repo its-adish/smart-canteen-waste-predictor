@@ -1,0 +1,86 @@
+import os
+import shutil
+import tempfile
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Detect Vercel serverless environment
+IS_VERCEL = bool(os.getenv("VERCEL"))
+
+# SQLite database setup: Vercel serverless filesystem is read-only except /tmp
+default_db_file = BASE_DIR / "canteen_waste.db"
+if IS_VERCEL:
+    temp_base = Path("/tmp") if Path("/tmp").exists() else Path(tempfile.gettempdir())
+    tmp_db_file = temp_base / "canteen_waste.db"
+    if not tmp_db_file.exists() and default_db_file.exists():
+        try:
+            shutil.copy2(default_db_file, tmp_db_file)
+        except Exception:
+            pass
+    DEFAULT_DATABASE_URL = f"sqlite:///{tmp_db_file}"
+else:
+    DEFAULT_DATABASE_URL = f"sqlite:///{default_db_file}"
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Smart Canteen Waste Predictor"
+    PROJECT_VERSION: str = "1.0.0"
+    API_V1_STR: str = "/api/v1"
+    
+    # Security
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "smart-canteen-super-secret-key-change-in-prod-2026")
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    
+    # Database: Default SQLite, upgradeable to PostgreSQL via DATABASE_URL env var
+    DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+    
+    # Host & Port for local/unified execution
+    HOST: str = os.getenv("HOST", "127.0.0.1")
+    PORT: int = int(os.getenv("PORT", "8000"))
+    
+    # Firebase configuration
+    VITE_FIREBASE_API_KEY: str = "AIzaSyC1nOhO-HvHUmZ832pU8PNhnKt04XiwkPQ"
+    VITE_FIREBASE_AUTH_DOMAIN: str = "workshop-b96b6.firebaseapp.com"
+    VITE_FIREBASE_PROJECT_ID: str = "workshop-b96b6"
+    VITE_FIREBASE_STORAGE_BUCKET: str = "workshop-b96b6.firebasestorage.app"
+    VITE_FIREBASE_MESSAGING_SENDER_ID: str = "469841093222"
+    VITE_FIREBASE_APP_ID: str = "1:469841093222:web:d7f6bbcd8ee606397183a7"
+    VITE_FIREBASE_MEASUREMENT_ID: str = "G-V5YN0E1HYC"
+    
+    # ML Models directory
+    MODEL_DIR: Path = (
+        (Path("/tmp") if Path("/tmp").exists() else Path(tempfile.gettempdir())) / "saved_models"
+        if IS_VERCEL
+        else (BASE_DIR / "saved_models")
+    )
+    
+    # CORS
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "*"
+    ]
+    
+    model_config = SettingsConfigDict(
+        case_sensitive=False,
+        env_file=".env",
+        extra="ignore"
+    )
+
+settings = Settings()
+try:
+    settings.MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    if IS_VERCEL and (BASE_DIR / "saved_models").exists():
+        for item in (BASE_DIR / "saved_models").glob("*"):
+            if item.is_file() and not (settings.MODEL_DIR / item.name).exists():
+                shutil.copy2(item, settings.MODEL_DIR / item.name)
+except Exception:
+    pass
+
+
