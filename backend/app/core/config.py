@@ -10,18 +10,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 IS_VERCEL = bool(os.getenv("VERCEL"))
 
 # SQLite database setup: Vercel serverless filesystem is read-only except /tmp
-default_db_file = BASE_DIR / "canteen_waste.db"
+candidate_db_paths = [
+    BASE_DIR / "canteen_waste.db",
+    BASE_DIR.parent / "backend" / "canteen_waste.db",
+    BASE_DIR.parent / "canteen_waste.db",
+    Path("/var/task/backend/canteen_waste.db"),
+    Path("/var/task/canteen_waste.db")
+]
+default_db_file = next((p for p in candidate_db_paths if p.exists() and p.is_file()), None)
+
 if IS_VERCEL:
     temp_base = Path("/tmp") if Path("/tmp").exists() else Path(tempfile.gettempdir())
     tmp_db_file = temp_base / "canteen_waste.db"
-    if not tmp_db_file.exists() and default_db_file.exists():
-        try:
-            shutil.copy2(default_db_file, tmp_db_file)
-        except Exception:
-            pass
+    if default_db_file and default_db_file.exists():
+        if not tmp_db_file.exists() or tmp_db_file.stat().st_size == 0:
+            try:
+                shutil.copy2(default_db_file, tmp_db_file)
+            except Exception as e:
+                print(f"[WARN] Error copying DB to /tmp: {e}")
     DEFAULT_DATABASE_URL = f"sqlite:///{tmp_db_file}"
 else:
-    DEFAULT_DATABASE_URL = f"sqlite:///{default_db_file}"
+    DEFAULT_DATABASE_URL = f"sqlite:///{default_db_file if default_db_file else (BASE_DIR / 'canteen_waste.db')}"
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Smart Canteen Waste Predictor"
@@ -76,11 +86,21 @@ class Settings(BaseSettings):
 settings = Settings()
 try:
     settings.MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    if IS_VERCEL and (BASE_DIR / "saved_models").exists():
-        for item in (BASE_DIR / "saved_models").glob("*"):
-            if item.is_file() and not (settings.MODEL_DIR / item.name).exists():
-                shutil.copy2(item, settings.MODEL_DIR / item.name)
-except Exception:
-    pass
+    if IS_VERCEL:
+        candidate_model_dirs = [
+            BASE_DIR / "saved_models",
+            BASE_DIR.parent / "backend" / "saved_models",
+            BASE_DIR.parent / "saved_models",
+            Path("/var/task/backend/saved_models"),
+            Path("/var/task/saved_models")
+        ]
+        source_model_dir = next((d for d in candidate_model_dirs if d.exists() and d.is_dir()), None)
+        if source_model_dir:
+            for item in source_model_dir.glob("*"):
+                if item.is_file() and not (settings.MODEL_DIR / item.name).exists():
+                    shutil.copy2(item, settings.MODEL_DIR / item.name)
+except Exception as e:
+    print(f"[WARN] Error setting up model directory: {e}")
+
 
 
